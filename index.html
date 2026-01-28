@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Billiard</title>
+<style>
+  body {
+    margin: 0;
+    background: #0b6623;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+const R = 40;
+const friction = 0.98;
+
+class Ball {
+  constructor(x, y, imgSrc) {
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.img = new Image();
+    this.img.src = imgSrc;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= friction;
+    this.vy *= friction;
+
+    if (this.x < R || this.x > canvas.width - R) this.vx *= -1;
+    if (this.y < R || this.y > canvas.height - R) this.vy *= -1;
+  }
+
+  draw() {
+    ctx.drawImage(
+      this.img,
+      this.x - R,
+      this.y - R,
+      R * 2,
+      R * 2
+    );
+  }
+}
+
+// 玉3つ
+const balls = [
+  new Ball(canvas.width * 0.3, canvas.height / 2, "ball1.jpeg"),
+  new Ball(canvas.width * 0.5, canvas.height / 2, "ball2.jpeg"),
+  new Ball(canvas.width * 0.7, canvas.height / 2, "ball3.jpeg")
+];
+
+let startX = 0;
+let startY = 0;
+let activeBall = balls[0];
+
+canvas.addEventListener("touchstart", e => {
+  const t = e.touches[0];
+  startX = t.clientX;
+  startY = t.clientY;
+});
+
+canvas.addEventListener("touchend", e => {
+  const t = e.changedTouches[0];
+  const dx = startX - t.clientX;
+  const dy = startY - t.clientY;
+  activeBall.vx += dx * 0.1;
+  activeBall.vy += dy * 0.1;
+});
+
+function collide(b1, b2) {
+  const dx = b2.x - b1.x;
+  const dy = b2.y - b1.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < R * 2) {
+    const angle = Math.atan2(dy, dx);
+    const s1 = Math.hypot(b1.vx, b1.vy);
+    const s2 = Math.hypot(b2.vx, b2.vy);
+
+    b1.vx = s2 * Math.cos(angle);
+    b1.vy = s2 * Math.sin(angle);
+    b2.vx = s1 * Math.cos(angle);
+    b2.vy = s1 * Math.sin(angle);
+  }
+}
+
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < balls.length; i++) {
+    balls[i].update();
+    balls[i].draw();
+    for (let j = i + 1; j < balls.length; j++) {
+      collide(balls[i], balls[j]);
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
